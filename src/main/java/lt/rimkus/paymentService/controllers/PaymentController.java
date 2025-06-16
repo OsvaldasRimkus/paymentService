@@ -1,6 +1,7 @@
 package lt.rimkus.paymentService.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import lt.rimkus.paymentService.DTOs.CancelPaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentResponseDTO;
@@ -8,7 +9,11 @@ import lt.rimkus.paymentService.DTOs.GetNotCancelledPaymentsDTO;
 import lt.rimkus.paymentService.DTOs.PaymentCancellationInfoDTO;
 import lt.rimkus.paymentService.DTOs.PaymentDTO;
 import lt.rimkus.paymentService.models.Payment;
+import lt.rimkus.paymentService.services.GeolocationService;
 import lt.rimkus.paymentService.services.PaymentService;
+import lt.rimkus.paymentService.utilities.IpAddressUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,8 +34,13 @@ import static lt.rimkus.paymentService.messages.ValidationErrorMessages.WAS_CANC
 @RestController
 @RequestMapping("api/payments")
 public class PaymentController {
+
+    private static final Logger logger = LoggerFactory.getLogger(PaymentController.class);
+
     @Autowired
     private PaymentService paymentService;
+    @Autowired
+    private GeolocationService geolocationService;
 
     @GetMapping
     @Operation(summary = "Retrieve all payments")
@@ -40,7 +50,12 @@ public class PaymentController {
 
     @PostMapping
     @Operation(summary = "Create a new payment")
-    public ResponseEntity<CreatePaymentResponseDTO> createPayment(@RequestBody CreatePaymentRequestDTO newPayment) {
+    public ResponseEntity<CreatePaymentResponseDTO> createPayment(@RequestBody CreatePaymentRequestDTO newPayment, HttpServletRequest httpRequest) {
+
+        String clientIp = IpAddressUtil.getClientIpAddress(httpRequest);
+        String country = geolocationService.resolveCountryByIp(clientIp);
+        logger.info("Processing payment creation request from IP: {} | Country: {} ", clientIp, country );
+
         CreatePaymentResponseDTO responseDTO = new CreatePaymentResponseDTO();
         responseDTO = paymentService.createPayment(newPayment, responseDTO);
         if (!responseDTO.getValidationErrors().isEmpty()) {
@@ -52,7 +67,12 @@ public class PaymentController {
 
     @DeleteMapping
     @Operation(summary = "Cancel an existing payment")
-    public ResponseEntity<CancelPaymentResponseDTO> cancelPayment(@RequestBody Long paymentId) {
+    public ResponseEntity<CancelPaymentResponseDTO> cancelPayment(@RequestBody Long paymentId, HttpServletRequest httpRequest) {
+
+        String clientIp = IpAddressUtil.getClientIpAddress(httpRequest);
+        String country = geolocationService.resolveCountryByIp(clientIp);
+        logger.info("Processing payment cancellation request from IP: {} | Country: {} ", clientIp, country );
+
         CancelPaymentResponseDTO responseDTO = paymentService.cancelPayment(paymentId);
 
         if (!responseDTO.getValidationErrors().isEmpty()) {
