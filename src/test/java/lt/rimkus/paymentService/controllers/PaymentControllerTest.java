@@ -1,5 +1,6 @@
 package lt.rimkus.paymentService.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lt.rimkus.paymentService.DTOs.CancelPaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentResponseDTO;
@@ -11,6 +12,7 @@ import lt.rimkus.paymentService.DTOs.TestPaymentDTO;
 import lt.rimkus.paymentService.models.Money;
 import lt.rimkus.paymentService.models.Payment;
 import lt.rimkus.paymentService.models.TestPayment;
+import lt.rimkus.paymentService.services.GeolocationService;
 import lt.rimkus.paymentService.services.PaymentService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +25,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -41,6 +44,8 @@ class PaymentControllerTest {
 
     @Mock
     private PaymentService paymentService;
+    @Mock
+    private GeolocationService geolocationService;
 
     @InjectMocks
     private PaymentController paymentController;
@@ -103,10 +108,11 @@ class PaymentControllerTest {
         paymentDTO.setDebtor_iban("DE789");
         paymentDTO.setCreditor_iban("FR321");
         responseDTO.setPaymentDTO(paymentDTO);
+        HttpServletRequest httpRequest = new MockHttpServletRequest();
 
         // When
         when(paymentService.createPayment(eq(requestDTO), any())).thenReturn(responseDTO);
-        ResponseEntity<CreatePaymentResponseDTO> result = paymentController.createPayment(requestDTO);
+        ResponseEntity<CreatePaymentResponseDTO> result = paymentController.createPayment(requestDTO, httpRequest);
 
         // Then
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
@@ -124,10 +130,11 @@ class PaymentControllerTest {
 
         CreatePaymentResponseDTO responseDTO = new CreatePaymentResponseDTO();
         responseDTO.getValidationErrors().add("Unsupported type: INVALID");
+        HttpServletRequest httpRequest = new MockHttpServletRequest();
 
         // When
         when(paymentService.createPayment(eq(requestDTO), any())).thenReturn(responseDTO);
-        ResponseEntity<CreatePaymentResponseDTO> result = paymentController.createPayment(requestDTO);
+        ResponseEntity<CreatePaymentResponseDTO> result = paymentController.createPayment(requestDTO, httpRequest);
 
         // Then
         assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
@@ -143,9 +150,10 @@ class PaymentControllerTest {
         CancelPaymentResponseDTO responseDTO = new CancelPaymentResponseDTO();
         responseDTO.getValidationErrors().add("Invalid request");
         given(paymentService.cancelPayment(paymentId)).willReturn(responseDTO);
+        HttpServletRequest httpRequest = new MockHttpServletRequest();
 
         // When
-        ResponseEntity<CancelPaymentResponseDTO> response = paymentController.cancelPayment(paymentId);
+        ResponseEntity<CancelPaymentResponseDTO> response = paymentController.cancelPayment(paymentId, httpRequest);
 
         // Then
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -158,9 +166,10 @@ class PaymentControllerTest {
         // Given
         CancelPaymentResponseDTO responseDTO = new CancelPaymentResponseDTO();
         given(paymentService.cancelPayment(paymentId)).willReturn(responseDTO);
+        HttpServletRequest httpRequest = new MockHttpServletRequest();
 
         // When
-        ResponseEntity<CancelPaymentResponseDTO> response = paymentController.cancelPayment(paymentId);
+        ResponseEntity<CancelPaymentResponseDTO> response = paymentController.cancelPayment(paymentId, httpRequest);
 
         // Then
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
@@ -180,9 +189,10 @@ class PaymentControllerTest {
         responseDTO.setCancellationFee(fee);
 
         given(paymentService.cancelPayment(paymentId)).willReturn(responseDTO);
+        HttpServletRequest httpRequest = new MockHttpServletRequest();
 
         // When
-        ResponseEntity<CancelPaymentResponseDTO> response = paymentController.cancelPayment(paymentId);
+        ResponseEntity<CancelPaymentResponseDTO> response = paymentController.cancelPayment(paymentId, httpRequest);
 
         // Then
         assertEquals(HttpStatus.OK, response.getStatusCode());
