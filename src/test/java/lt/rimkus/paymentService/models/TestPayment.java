@@ -2,7 +2,9 @@ package lt.rimkus.paymentService.models;
 
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
 import lt.rimkus.paymentService.DTOs.PaymentDTO;
-import lt.rimkus.paymentService.DTOs.TestPaymentDTO; /**
+import lt.rimkus.paymentService.DTOs.TestPaymentDTO;
+
+/**
  * Concrete test implementation of the abstract Payment class
  */
 public class TestPayment extends Payment {

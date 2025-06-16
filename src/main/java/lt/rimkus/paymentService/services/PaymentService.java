@@ -3,6 +3,8 @@ package lt.rimkus.paymentService.services;
 import lt.rimkus.paymentService.DTOs.CancelPaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentResponseDTO;
+import lt.rimkus.paymentService.DTOs.GetNotCancelledPaymentsDTO;
+import lt.rimkus.paymentService.DTOs.PaymentCancellationInfoDTO;
 import lt.rimkus.paymentService.adapters.PaymentTypeValidationAdapter;
 import lt.rimkus.paymentService.exceptions.RequestValidationException;
 import lt.rimkus.paymentService.factories.PaymentCreationFactory;
@@ -12,6 +14,7 @@ import lt.rimkus.paymentService.repositories.PaymentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -71,13 +74,25 @@ public class PaymentService {
                 paymentCancellationService.preparePaymentForCancellation(paymentToCancel, dateOfCancellationRequest, timeOfCancellationRequest);
                 paymentRepository.save(paymentToCancel);
                 responseDTO.setPaymentDTO(paymentToCancel.convertToDTO());
-                responseDTO.setCancellationFee(new Money());
-                responseDTO.getCancellationFee().setAmount(paymentToCancel.getCancellationFee().getAmount());
-                responseDTO.getCancellationFee().setCurrency(paymentToCancel.getCancellationFee().getCurrency());
+                responseDTO.setCancellationFee(new Money(paymentToCancel.getCancellationFee().getAmount(), paymentToCancel.getCancellationFee().getCurrency()));
             }
         } catch (RequestValidationException rve) {
             responseDTO.getValidationErrors().add(rve.getMessage());
         }
         return responseDTO;
+    }
+
+    public List<Long> getNotCanceledPaymentIds(GetNotCancelledPaymentsDTO requestDTO) {
+        BigDecimal minAmount = requestDTO.getMinAmount();
+        BigDecimal maxAmount = requestDTO.getMaxAmount();
+        if (!requestDTO.isFilter()) {
+            minAmount = null;
+            maxAmount = null;
+        }
+        return paymentRepository.getNotCancelledPaymentsWithinRange(minAmount, maxAmount);
+    }
+
+    public PaymentCancellationInfoDTO getPaymentCancellationDetails(Long id) {
+        return paymentRepository.getPaymentCancellationDetails(id);
     }
 }

@@ -63,9 +63,7 @@ public class PaymentCancellationService {
 
     protected void updatePaymentData(Payment paymentToCancel, LocalDateTime timeOfCancellationRequest, BigDecimal cancellationFee) {
         paymentToCancel.setCancelled(true);
-        paymentToCancel.setCancellationFee(new Money());
-        paymentToCancel.getCancellationFee().setCurrency(Currency.EUR.getCode());
-        paymentToCancel.getCancellationFee().setAmount(cancellationFee);
+        paymentToCancel.setCancellationFee(new Money(cancellationFee, Currency.EUR.getCode()));
         paymentToCancel.setCancellationTime(timeOfCancellationRequest);
     }
 }

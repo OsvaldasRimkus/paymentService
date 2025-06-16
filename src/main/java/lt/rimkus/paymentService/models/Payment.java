@@ -129,9 +129,7 @@ public abstract class Payment implements Transaction {
 
     void populateCommonData(CreatePaymentRequestDTO requestDTO) {
         this.setType(requestDTO.getType());
-        this.setMoney(new Money());
-        this.getMoney().setCurrency(requestDTO.getMoney().getCurrency());
-        this.getMoney().setAmount(requestDTO.getMoney().getAmount());
+        this.setMoney(new Money(requestDTO.getMoney().getAmount(), requestDTO.getMoney().getCurrency()));
         this.setDebtor_iban(requestDTO.getDebtor_iban());
         this.setCreditor_iban(requestDTO.getCreditor_iban());
         this.setCreatedDate(LocalDate.now());

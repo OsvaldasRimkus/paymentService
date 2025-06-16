@@ -16,6 +16,14 @@ public class Money {
     @Column(name = "currency", nullable = false)
     private String currency;
 
+    public Money() {
+    }
+
+    public Money(BigDecimal amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
     public BigDecimal getAmount() {
         return amount;
     }

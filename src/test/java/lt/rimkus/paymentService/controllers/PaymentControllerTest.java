@@ -3,7 +3,9 @@ package lt.rimkus.paymentService.controllers;
 import lt.rimkus.paymentService.DTOs.CancelPaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentResponseDTO;
+import lt.rimkus.paymentService.DTOs.GetNotCancelledPaymentsDTO;
 import lt.rimkus.paymentService.DTOs.MoneyDTO;
+import lt.rimkus.paymentService.DTOs.PaymentCancellationInfoDTO;
 import lt.rimkus.paymentService.DTOs.PaymentDTO;
 import lt.rimkus.paymentService.DTOs.TestPaymentDTO;
 import lt.rimkus.paymentService.models.Money;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -184,5 +188,46 @@ class PaymentControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(responseDTO, response.getBody());
         assertTrue(responseDTO.getMessage().contains("was successfully cancelled. Cancellation fee is:"));
+    }
+
+    @Test
+    @DisplayName("Should correctly return cancelled payment IDs")
+    void shouldReturnNotCancelledPaymentIds_givenValidRange() {
+        // Given
+        GetNotCancelledPaymentsDTO requestDTO = new GetNotCancelledPaymentsDTO();
+        requestDTO.setMinAmount(new BigDecimal("10.00"));
+        requestDTO.setMaxAmount(new BigDecimal("50.00"));
+
+        List<Long> expected = List.of(1L, 2L);
+        Mockito.when(paymentService.getNotCanceledPaymentIds(requestDTO)).thenReturn(expected);
+
+        // When
+        ResponseEntity<List<Long>> response = paymentController.getNotCanceledPaymentIds(requestDTO);
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Assertions.assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains(1L));
+        assertTrue(response.getBody().contains(2L));
+    }
+
+    @Test
+    @DisplayName("Should correctly return payment cancellation details")
+    void shouldReturnCancellationDetails_givenValidId() {
+        // Given
+        Long paymentId = 5L;
+        PaymentCancellationInfoDTO dto = new PaymentCancellationInfoDTO(paymentId, new Money(new BigDecimal("3.75"), "EUR"));
+
+        Mockito.when(paymentService.getPaymentCancellationDetails(paymentId)).thenReturn(dto);
+
+        // When
+        ResponseEntity<PaymentCancellationInfoDTO> response = paymentController.getPaymentCancellationDetails(paymentId);
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        Assertions.assertNotNull(response.getBody());
+        assertThat(response.getBody().getId()).isEqualTo(paymentId);
+        assertThat(response.getBody().getCancellationFee().getAmount()).isEqualByComparingTo("3.75");
     }
 }

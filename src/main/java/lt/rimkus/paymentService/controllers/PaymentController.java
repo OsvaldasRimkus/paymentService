@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import lt.rimkus.paymentService.DTOs.CancelPaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentResponseDTO;
+import lt.rimkus.paymentService.DTOs.GetNotCancelledPaymentsDTO;
+import lt.rimkus.paymentService.DTOs.PaymentCancellationInfoDTO;
 import lt.rimkus.paymentService.DTOs.PaymentDTO;
 import lt.rimkus.paymentService.models.Payment;
 import lt.rimkus.paymentService.services.PaymentService;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -61,4 +64,19 @@ public class PaymentController {
             return ResponseEntity.ok(responseDTO);
         }
     }
+
+    @Operation(summary = "Get all payments that are not canceled")
+    @RequestMapping(value = "querying/notCancelled", method = RequestMethod.POST)
+    public ResponseEntity<List<Long>> getNotCanceledPaymentIds(@RequestBody GetNotCancelledPaymentsDTO requestDTO) {
+        List<Long> responseDTO = paymentService.getNotCanceledPaymentIds(requestDTO);
+        return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
+    }
+
+    @Operation(summary = "Get payment cancellation details")
+    @RequestMapping(value = "querying/cancellationDetails", method = RequestMethod.POST)
+    public ResponseEntity<PaymentCancellationInfoDTO> getPaymentCancellationDetails(@RequestBody Long paymentId) {
+        PaymentCancellationInfoDTO responseDTO = paymentService.getPaymentCancellationDetails(paymentId);
+        return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
+    }
+
 }

@@ -2,6 +2,7 @@ package lt.rimkus.paymentService.services;
 
 import static lt.rimkus.paymentService.messages.ValidationErrorMessages.CREATION_REQUEST_NULL;
 import static lt.rimkus.paymentService.messages.ValidationErrorMessages.UNSUPPORTED_TYPE;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -16,6 +17,8 @@ import java.util.Optional;
 import lt.rimkus.paymentService.DTOs.CancelPaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentResponseDTO;
+import lt.rimkus.paymentService.DTOs.GetNotCancelledPaymentsDTO;
+import lt.rimkus.paymentService.DTOs.PaymentCancellationInfoDTO;
 import lt.rimkus.paymentService.DTOs.PaymentDTO;
 import lt.rimkus.paymentService.adapters.PaymentTypeValidationAdapter;
 import lt.rimkus.paymentService.exceptions.RequestValidationException;
@@ -585,6 +588,68 @@ class PaymentServiceTest {
             // Verify the original fee object is not the same as the response fee object
             assertNotSame(originalFee, result.getCancellationFee());
         }
+    }
+
+    @Test
+    @DisplayName("Should return all not-cancelled payment IDs when filter is disabled")
+    void shouldReturnAllNotCancelledIdsWhenFilterIsOff() {
+        // Given
+        GetNotCancelledPaymentsDTO dto = new GetNotCancelledPaymentsDTO();
+        dto.setFilter(false); // filter off
+        dto.setMinAmount(new BigDecimal("10.00"));
+        dto.setMaxAmount(new BigDecimal("100.00"));
+
+        List<Long> expectedIds = List.of(1L, 2L, 3L);
+        when(paymentRepository.getNotCancelledPaymentsWithinRange(null, null)).thenReturn(expectedIds);
+
+        // When
+        List<Long> result = paymentService.getNotCanceledPaymentIds(dto);
+
+        // Then
+        assertThat(result).isEqualTo(expectedIds);
+        verify(paymentRepository).getNotCancelledPaymentsWithinRange(null, null);
+    }
+
+    @Test
+    @DisplayName("Should return filtered not-cancelled payment IDs when filter is enabled")
+    void shouldReturnFilteredIdsWhenFilterIsOn() {
+        // Given
+        GetNotCancelledPaymentsDTO dto = new GetNotCancelledPaymentsDTO();
+        dto.setFilter(true);
+        dto.setMinAmount(new BigDecimal("20.00"));
+        dto.setMaxAmount(new BigDecimal("80.00"));
+
+        List<Long> expectedIds = List.of(2L, 4L);
+        when(paymentRepository.getNotCancelledPaymentsWithinRange(
+                new BigDecimal("20.00"), new BigDecimal("80.00"))).thenReturn(expectedIds);
+
+        // When
+        List<Long> result = paymentService.getNotCanceledPaymentIds(dto);
+
+        // Then
+        assertThat(result).isEqualTo(expectedIds);
+        verify(paymentRepository).getNotCancelledPaymentsWithinRange(new BigDecimal("20.00"), new BigDecimal("80.00"));
+    }
+
+    @Test
+    @DisplayName("Should return cancellation details for a given payment ID")
+    void shouldReturnPaymentCancellationDetails() {
+        // Given
+        Long paymentId = 10L;
+        PaymentCancellationInfoDTO expectedDTO = new PaymentCancellationInfoDTO(paymentId, new Money(new BigDecimal("3.00"), "EUR"));
+
+        when(paymentRepository.getPaymentCancellationDetails(paymentId)).thenReturn(expectedDTO);
+
+        // When
+        PaymentCancellationInfoDTO result = paymentService.getPaymentCancellationDetails(paymentId);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(paymentId);
+        assertThat(result.getCancellationFee().getAmount()).isEqualByComparingTo("3.00");
+        assertEquals(3, result.getCancellationFee().getCurrency().length());
+        assertThat(result.getCancellationFee().getCurrency()).contains("EUR");
+        verify(paymentRepository).getPaymentCancellationDetails(paymentId);
     }
 
 }
