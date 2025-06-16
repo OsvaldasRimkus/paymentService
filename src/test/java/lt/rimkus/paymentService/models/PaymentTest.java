@@ -11,10 +11,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("Payment Class Tests")
 class PaymentTest {
@@ -45,7 +50,7 @@ class PaymentTest {
 
         @Test
         @DisplayName("Should pass validation when payment type is valid")
-        void givenValidPaymentType_whenValidatingEntityCreationRequest_thenShouldPass() throws RequestValidationException {
+        void givenValidPaymentType_whenValidatingEntityCreationRequest_thenShouldPass() {
             // Given
             validRequestDTO.setType("TYPE1");
 
@@ -103,7 +108,7 @@ class PaymentTest {
 
         @Test
         @DisplayName("Should pass validation when amount is positive")
-        void givenPositiveAmount_whenValidatingEntityCreationRequest_thenShouldPass() throws RequestValidationException {
+        void givenPositiveAmount_whenValidatingEntityCreationRequest_thenShouldPass() {
             // Given
             validMoney.setAmount(new BigDecimal("150.50"));
             validRequestDTO.setMoney(validMoney);
@@ -193,7 +198,7 @@ class PaymentTest {
 
         @Test
         @DisplayName("Should pass validation when currency is valid")
-        void givenValidCurrency_whenValidatingEntityCreationRequest_thenShouldPass() throws RequestValidationException {
+        void givenValidCurrency_whenValidatingEntityCreationRequest_thenShouldPass() {
             // Given
             validMoney.setCurrency("EUR");
             validRequestDTO.setMoney(validMoney);
@@ -273,7 +278,7 @@ class PaymentTest {
 
         @Test
         @DisplayName("Should pass validation when both IBANs are valid")
-        void givenValidIBANs_whenValidatingEntityCreationRequest_thenShouldPass() throws RequestValidationException {
+        void givenValidIBANs_whenValidatingEntityCreationRequest_thenShouldPass() {
             // Given
             validRequestDTO.setDebtor_iban("DE89370400440532013000");
             validRequestDTO.setCreditor_iban("FR1420041010050500013M02606");
@@ -348,7 +353,7 @@ class PaymentTest {
         void givenValidRequestDTO_whenPopulatingCommonData_thenShouldSetAllFields() {
             // Given
             CreatePaymentRequestDTO requestDTO = new CreatePaymentRequestDTO();
-            requestDTO.setType("SEPA");
+            requestDTO.setType("TYPE1");
             MoneyDTO money = new MoneyDTO();
             money.setAmount(new BigDecimal("250.75"));
             money.setCurrency("EUR");
@@ -360,7 +365,7 @@ class PaymentTest {
             payment.populateCommonData(requestDTO);
 
             // Then
-            assertEquals("SEPA", payment.getType());
+            assertEquals("TYPE1", payment.getType());
             assertEquals(new BigDecimal("250.75"), payment.getMoney().getAmount());
             assertEquals("EUR", payment.getMoney().getCurrency());
             assertEquals("DE89370400440532013000", payment.getDebtor_iban());
@@ -372,7 +377,7 @@ class PaymentTest {
         void givenPaymentEntity_whenPopulatingCommonDTOData_thenShouldSetAllDTOFields() {
             // Given
             payment.setId(123L);
-            payment.setType("SEPA");
+            payment.setType("TYPE1");
             Money money = new Money();
             money.setAmount(new BigDecimal("300.25"));
             money.setCurrency("USD");
@@ -387,7 +392,7 @@ class PaymentTest {
 
             // Then
             assertEquals(123L, dto.getId());
-            assertEquals("SEPA", dto.getType());
+            assertEquals("TYPE1", dto.getType());
             assertEquals(new BigDecimal("300.25"), dto.getMoney().getAmount());
             assertEquals("USD", dto.getMoney().getCurrency());
             assertEquals("DE89370400440532013000", dto.getDebtor_iban());
@@ -403,7 +408,7 @@ class PaymentTest {
         @DisplayName("Should set type successfully when value is not null")
         void givenValidType_whenSettingType_thenShouldSetSuccessfully() {
             // Given
-            String validType = "SEPA";
+            String validType = "TYPE1";
 
             // When
             payment.setType(validType);
@@ -479,6 +484,189 @@ class PaymentTest {
             );
             assertEquals("Creditor IBAN cannot be null", exception.getMessage());
         }
+
+        @Test
+        @DisplayName("Should set and get created date correctly")
+        void testSetCreatedDate() {
+            // Given
+            LocalDate expectedDate = LocalDate.of(2025, 1, 1);
+
+            // When
+            payment.setCreatedDate(expectedDate);
+
+            // Then
+            assertEquals(expectedDate, payment.getCreatedDate());
+        }
+
+        @Test
+        @DisplayName("Should handle null created date")
+        void testSetCreatedDateNull() {
+            // Given
+            LocalDate nullDate = null;
+
+            // When
+            payment.setCreatedDate(nullDate);
+
+            // Then
+            assertNull(payment.getCreatedDate());
+        }
+
+        @Test
+        @DisplayName("Should set and get created at timestamp correctly")
+        void testSetCreatedAt() {
+            // Given
+            LocalDateTime expectedDateTime = LocalDateTime.of(2024, 1, 15, 10, 30, 45);
+
+            // When
+            payment.setCreatedAt(expectedDateTime);
+
+            // Then
+            assertEquals(expectedDateTime, payment.getCreatedAt());
+        }
+
+        @Test
+        @DisplayName("Should handle null created at timestamp")
+        void testSetCreatedAtNull() {
+            // Given
+            LocalDateTime nullDateTime = null;
+
+            // When
+            payment.setCreatedAt(nullDateTime);
+
+            // Then
+            assertNull(payment.getCreatedAt());
+        }
+
+        @Test
+        @DisplayName("Should set cancelled status to true")
+        void testSetCancelledTrue() {
+            // When
+            payment.setCancelled(true);
+
+            // Then
+            assertTrue(payment.isCancelled());
+        }
+
+        @Test
+        @DisplayName("Should set cancelled status to false")
+        void testSetCancelledFalse() {
+            // When
+            payment.setCancelled(false);
+
+            // Then
+            assertFalse(payment.isCancelled());
+        }
+
+        @Test
+        @DisplayName("Should set and get cancellation fee correctly")
+        void testSetCancellationFee() {
+            // Given
+            Money expectedFee = new Money();
+            expectedFee.setCurrency("USD");
+            expectedFee.setAmount(BigDecimal.valueOf(25.50));
+
+            // When
+            payment.setCancellationFee(expectedFee);
+
+            // Then
+            assertEquals(expectedFee, payment.getCancellationFee());
+        }
+
+        @Test
+        @DisplayName("Should handle null cancellation fee")
+        void testSetCancellationFeeNull() {
+            // Given
+            Money nullFee = null;
+
+            // When
+            payment.setCancellationFee(nullFee);
+
+            // Then
+            assertNull(payment.getCancellationFee());
+        }
+
+        @Test
+        @DisplayName("Should set and get cancellation time correctly")
+        void testSetCancellationTime() {
+            // Given
+            LocalDateTime expectedCancellationTime = LocalDateTime.of(2024, 1, 15, 14, 20, 30);
+
+            // When
+            payment.setCancellationTime(expectedCancellationTime);
+
+            // Then
+            assertEquals(expectedCancellationTime, payment.getCancellationTime());
+        }
+
+        @Test
+        @DisplayName("Should handle null cancellation time")
+        void testSetCancellationTimeNull() {
+            // Given
+            LocalDateTime nullCancellationTime = null;
+
+            // When
+            payment.setCancellationTime(nullCancellationTime);
+
+            // Then
+            assertNull(payment.getCancellationTime());
+        }
+
+        @Test
+        @DisplayName("Should maintain independent setter behavior")
+        void testSettersIndependence() {
+            // Given
+            LocalDate createdDate = LocalDate.of(2024, 1, 15);
+            LocalDateTime createdAt = LocalDateTime.of(2024, 1, 15, 10, 30, 45);
+            boolean cancelled = true;
+            Money cancellationFee = new Money();
+            cancellationFee.setCurrency("EUR");
+            cancellationFee.setAmount(BigDecimal.valueOf(15.75));
+            LocalDateTime cancellationTime = LocalDateTime.of(2024, 1, 15, 11, 45, 0);
+
+            // When
+            payment.setCreatedDate(createdDate);
+            payment.setCreatedAt(createdAt);
+            payment.setCancelled(cancelled);
+            payment.setCancellationFee(cancellationFee);
+            payment.setCancellationTime(cancellationTime);
+
+            // Then
+            assertEquals(createdDate, payment.getCreatedDate());
+            assertEquals(createdAt, payment.getCreatedAt());
+            assertEquals(cancelled, payment.isCancelled());
+            assertEquals(cancellationFee, payment.getCancellationFee());
+            assertEquals(cancellationTime, payment.getCancellationTime());
+        }
+
+        @Test
+        @DisplayName("Should allow overwriting previously set values")
+        void testSettersOverwrite() {
+            // Given - Set initial values
+            payment.setCreatedDate(LocalDate.of(2024, 1, 1));
+            payment.setCancelled(false);
+            Money cancellationFee = new Money();
+            cancellationFee.setCurrency("USD");
+            cancellationFee.setAmount(BigDecimal.valueOf(10.00));
+            payment.setCancellationFee(cancellationFee);
+
+
+            // When - Overwrite with new values
+            LocalDate newCreatedDate = LocalDate.of(2024, 2, 1);
+            boolean newCancelled = true;
+            Money newCancellationFee = new Money();
+            newCancellationFee.setCurrency("EUR");
+            newCancellationFee.setAmount(BigDecimal.valueOf(20.00));
+
+            payment.setCreatedDate(newCreatedDate);
+            payment.setCancelled(newCancelled);
+            payment.setCancellationFee(newCancellationFee);
+
+            // Then
+            assertEquals(newCreatedDate, payment.getCreatedDate());
+            assertEquals(newCancelled, payment.isCancelled());
+            assertEquals(newCancellationFee, payment.getCancellationFee());
+        }
+
     }
 
     @Nested
@@ -487,7 +675,7 @@ class PaymentTest {
 
         @Test
         @DisplayName("Should validate complete valid payment successfully")
-        void givenCompleteValidPayment_whenValidatingEntityCreationRequest_thenShouldPass() throws RequestValidationException {
+        void givenCompleteValidPayment_whenValidatingEntityCreationRequest_thenShouldPass() {
             // Given
             CreatePaymentRequestDTO completeValidRequest = new CreatePaymentRequestDTO();
             completeValidRequest.setType("TYPE1");

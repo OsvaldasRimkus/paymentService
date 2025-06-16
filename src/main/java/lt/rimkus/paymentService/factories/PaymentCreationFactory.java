@@ -9,8 +9,6 @@ import lt.rimkus.paymentService.models.TYPE2Payment;
 import lt.rimkus.paymentService.models.TYPE3Payment;
 import org.springframework.stereotype.Component;
 
-import static lt.rimkus.paymentService.messages.ValidationErrorMessages.TYPE_MANDATORY;
-
 @Component
 public class PaymentCreationFactory {
 

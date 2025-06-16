@@ -11,4 +11,5 @@ JDBC URL: jdbc:h2:mem:testdb
 User Name: User456
 Password: 852741963
 query to check all payments: select * from payments;
-    
+
+Java version used: openjdk version "22.0.1"

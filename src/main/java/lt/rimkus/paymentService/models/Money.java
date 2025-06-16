@@ -6,11 +6,14 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 
+import static lt.rimkus.paymentService.messages.OtherMessages.AMOUNT_NOT_NULL;
+import static lt.rimkus.paymentService.messages.OtherMessages.CURRENCY_NOT_NULL;
+
 @Embeddable
 public class Money {
-    @Column(nullable = false)
+    @Column(name = "amount", nullable = false)
     private BigDecimal amount;
-    @Column(nullable = false)
+    @Column(name = "currency", nullable = false)
     private String currency;
 
     public BigDecimal getAmount() {
@@ -19,7 +22,7 @@ public class Money {
 
     public void setAmount(@NotNull BigDecimal amount) {
         if (amount == null) {
-            throw new IllegalArgumentException("Amount cannot be null");
+            throw new IllegalArgumentException(AMOUNT_NOT_NULL);
         }
         this.amount = amount;
     }
@@ -30,7 +33,7 @@ public class Money {
 
     public void setCurrency(@NotNull String currency) {
         if (currency == null) {
-            throw new IllegalArgumentException("Currency cannot be null");
+            throw new IllegalArgumentException(CURRENCY_NOT_NULL);
         }
         this.currency = currency.trim();
     }

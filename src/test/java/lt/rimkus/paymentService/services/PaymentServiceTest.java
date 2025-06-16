@@ -5,25 +5,33 @@ import static lt.rimkus.paymentService.messages.ValidationErrorMessages.UNSUPPOR
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
+import lt.rimkus.paymentService.DTOs.CancelPaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.PaymentDTO;
 import lt.rimkus.paymentService.adapters.PaymentTypeValidationAdapter;
 import lt.rimkus.paymentService.exceptions.RequestValidationException;
 import lt.rimkus.paymentService.factories.PaymentCreationFactory;
+import lt.rimkus.paymentService.models.Money;
 import lt.rimkus.paymentService.models.Payment;
 import lt.rimkus.paymentService.repositories.PaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Payment Service Class Tests")
 class PaymentServiceTest {
     @Mock
     private PaymentRepository paymentRepository;
@@ -34,6 +42,9 @@ class PaymentServiceTest {
     @Mock
     private PaymentTypeValidationAdapter paymentTypeValidationAdapter;
 
+    @Mock
+    private PaymentCancellationService paymentCancellationService;
+
     @InjectMocks
     private PaymentService paymentService;
 
@@ -41,6 +52,9 @@ class PaymentServiceTest {
     private CreatePaymentResponseDTO responseDTO;
     private Payment mockPayment;
     private PaymentDTO mockPaymentDTO;
+    private Money mockCancellationFee;
+    private LocalDate fixedDate;
+    private LocalDateTime fixedDateTime;
 
     @BeforeEach
     void setUp() {
@@ -49,10 +63,17 @@ class PaymentServiceTest {
 
         mockPayment = mock(Payment.class);
         mockPaymentDTO = mock(PaymentDTO.class);
+
+        mockCancellationFee = new Money();
+        mockCancellationFee.setAmount(BigDecimal.valueOf(25.50));
+        mockCancellationFee.setCurrency("USD");
+
+        fixedDate = LocalDate.of(2024, 6, 16);
+        fixedDateTime = LocalDateTime.of(2024, 6, 16, 10, 30, 0);
     }
 
-    // Tests for getAllPayments method
     @Test
+    @DisplayName("Should return all payments correctly")
     void testGetAllPayments_ShouldReturnAllPayments() {
         // Given
         Payment payment1 = mock(Payment.class);
@@ -69,6 +90,7 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("Should return no payments correctly")
     void testGetAllPayments_WhenRepositoryReturnsEmptyList_ShouldReturnEmptyList() {
         // Given
         List<Payment> emptyList = new ArrayList<>();
@@ -84,6 +106,7 @@ class PaymentServiceTest {
 
     // Tests for createPayment method - Success scenarios
     @Test
+    @DisplayName("Should create payment successfully from a valid request")
     void testCreatePayment_WithValidRequest_ShouldCreatePaymentSuccessfully() throws RequestValidationException {
         // Given
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
@@ -105,6 +128,7 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("Should call repository to save payment once")
     void testCreatePayment_WithValidRequest_ShouldCallRepositorySaveOnce() throws RequestValidationException {
         // Given
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
@@ -120,6 +144,7 @@ class PaymentServiceTest {
 
     // Tests for createPayment method - Validation failure scenarios
     @Test
+    @DisplayName("Should return an error if payment creation request is null")
     void testCreatePayment_WithNullRequest_ShouldAddValidationError() throws RequestValidationException {
         // When
         CreatePaymentResponseDTO result = paymentService.createPayment(null, responseDTO);
@@ -135,6 +160,7 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("Should return an error if creation request has an invalid payment type")
     void testCreatePayment_WithInvalidPaymentType_ShouldAddValidationError() throws RequestValidationException {
         // Given
         String invalidType = "INVALID_TYPE";
@@ -156,6 +182,7 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("Should return a validation exception if payment creation fails")
     void testCreatePayment_WhenFactoryThrowsValidationException_ShouldAddValidationError() throws RequestValidationException {
         // Given
         String errorMessage = "Factory validation error";
@@ -177,6 +204,7 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("Should be able to add errors to existing error in the list")
     void testCreatePayment_WithMultipleValidationErrors_ShouldAddAllErrors() {
         // Given
         responseDTO.getValidationErrors().add("Pre-existing error");
@@ -195,6 +223,7 @@ class PaymentServiceTest {
 
     // Tests for edge cases and error scenarios
     @Test
+    @DisplayName("Should not proceed with payment creation if there are errors")
     void testCreatePayment_WithResponseDTOHavingExistingErrors_ShouldNotProcessPayment() throws RequestValidationException {
         // Given
         responseDTO.getValidationErrors().add("Existing validation error");
@@ -215,6 +244,7 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("Should return the same responseDTO instance")
     void testCreatePayment_ShouldReturnSameResponseDTOInstance() throws RequestValidationException {
         // Given
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
@@ -230,6 +260,7 @@ class PaymentServiceTest {
 
     // Test method interactions and call order
     @Test
+    @DisplayName("Should validate payment type before creating a payment")
     void testCreatePayment_ShouldValidatePaymentTypeBeforeCreation() throws RequestValidationException {
         // Given
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
@@ -248,6 +279,7 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("Should not check for payment type if payment creation request is null")
     void testCreatePayment_WhenNullRequestAndInvalidType_ShouldOnlyAddNullRequestError() {
         // When
         CreatePaymentResponseDTO result = paymentService.createPayment(null, responseDTO);
@@ -261,8 +293,8 @@ class PaymentServiceTest {
         verify(paymentTypeValidationAdapter, never()).isPaymentTypeNotValid(any());
     }
 
-    // Test with different payment types
     @Test
+    @DisplayName("Should not skip validation for different payment types")
     void testCreatePayment_WithDifferentPaymentTypes_ShouldNotSkipValidation() throws RequestValidationException {
         when(paymentCreationFactory.createNewPayment(requestDTO)).thenReturn(mockPayment);
         when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
@@ -296,8 +328,8 @@ class PaymentServiceTest {
         verify(paymentTypeValidationAdapter).isPaymentTypeNotValid("TYPE_INVALID");
     }
 
-    // Test assertion behavior
     @Test
+    @DisplayName("Should not throw an exception if service returns a created payment and save it")
     void testCreatePayment_AssertionBehavior_NewPaymentNotNull() throws RequestValidationException {
         // Given
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
@@ -313,8 +345,8 @@ class PaymentServiceTest {
         verify(paymentRepository).save(mockPayment);
     }
 
-    // Test thread safety considerations (if applicable)
     @Test
+    @DisplayName("Concurrent calls should be handled independently")
     void testCreatePayment_MultipleConcurrentCalls_ShouldHandleIndependently() throws RequestValidationException {
         // Given
         CreatePaymentRequestDTO request1 = new CreatePaymentRequestDTO();
@@ -339,4 +371,220 @@ class PaymentServiceTest {
         assertFalse(result2.getValidationErrors().isEmpty());
         assertNotSame(result1, result2);
     }
+
+    @Test
+    @DisplayName("Should successfully cancel payment when payment exists")
+    void testCancelPayment_Success() throws RequestValidationException {
+        // Given
+        long paymentId = 123L;
+
+        when(paymentRepository.findById(paymentId)).thenReturn(Optional.of(mockPayment));
+        when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(mockPayment.getCancellationFee()).thenReturn(mockCancellationFee);
+
+        try (MockedStatic<LocalDate> mockedLocalDate = mockStatic(LocalDate.class);
+             MockedStatic<LocalDateTime> mockedLocalDateTime = mockStatic(LocalDateTime.class)) {
+
+            mockedLocalDate.when(LocalDate::now).thenReturn(fixedDate);
+            mockedLocalDateTime.when(LocalDateTime::now).thenReturn(fixedDateTime);
+
+            // When
+            CancelPaymentResponseDTO result = paymentService.cancelPayment(paymentId);
+
+            // Then
+            assertNotNull(result);
+            assertEquals(mockPaymentDTO, result.getPaymentDTO());
+            assertNotNull(result.getCancellationFee());
+            assertEquals(BigDecimal.valueOf(25.50), result.getCancellationFee().getAmount());
+            assertEquals("USD", result.getCancellationFee().getCurrency());
+            assertTrue(result.getValidationErrors().isEmpty());
+
+            // Verify interactions
+            verify(paymentRepository).findById(paymentId);
+            verify(paymentCancellationService).preparePaymentForCancellation(mockPayment, fixedDate, fixedDateTime);
+            verify(paymentRepository).save(mockPayment);
+            verify(mockPayment).convertToDTO();
+            verify(mockPayment, times(2)).getCancellationFee(); // Called twice for amount and currency
+        }
+    }
+
+    @Test
+    @DisplayName("Should return validation error when payment does not exist")
+    void testCancelPayment_PaymentNotFound() throws RequestValidationException {
+        // Given
+        long paymentId = 999L;
+        String expectedErrorMessage = "Provided payment id does not exist";
+
+        when(paymentRepository.findById(paymentId)).thenReturn(Optional.empty());
+
+        try (MockedStatic<LocalDate> mockedLocalDate = mockStatic(LocalDate.class);
+             MockedStatic<LocalDateTime> mockedLocalDateTime = mockStatic(LocalDateTime.class)) {
+
+            mockedLocalDate.when(LocalDate::now).thenReturn(fixedDate);
+            mockedLocalDateTime.when(LocalDateTime::now).thenReturn(fixedDateTime);
+
+            // When
+            CancelPaymentResponseDTO result = paymentService.cancelPayment(paymentId);
+
+            // Then
+            assertNotNull(result);
+            assertNull(result.getPaymentDTO());
+            assertNull(result.getCancellationFee());
+            assertFalse(result.getValidationErrors().isEmpty());
+            assertTrue(result.getValidationErrors().contains(expectedErrorMessage));
+
+            // Verify interactions
+            verify(paymentRepository).findById(paymentId);
+            verify(paymentCancellationService, never()).preparePaymentForCancellation(any(), any(), any());
+            verify(paymentRepository, never()).save(any());
+        }
+    }
+
+    @Test
+    @DisplayName("Should handle RequestValidationException from cancellation service")
+    void testCancelPayment_CancellationServiceThrowsException() throws RequestValidationException {
+        // Given
+        long paymentId = 123L;
+        String errorMessage = "Payment cannot be cancelled";
+        RequestValidationException exception = new RequestValidationException(errorMessage);
+
+        when(paymentRepository.findById(paymentId)).thenReturn(Optional.of(mockPayment));
+        doThrow(exception).when(paymentCancellationService)
+                .preparePaymentForCancellation(any(Payment.class), any(LocalDate.class), any(LocalDateTime.class));
+
+        try (MockedStatic<LocalDate> mockedLocalDate = mockStatic(LocalDate.class);
+             MockedStatic<LocalDateTime> mockedLocalDateTime = mockStatic(LocalDateTime.class)) {
+
+            mockedLocalDate.when(LocalDate::now).thenReturn(fixedDate);
+            mockedLocalDateTime.when(LocalDateTime::now).thenReturn(fixedDateTime);
+
+            // When
+            CancelPaymentResponseDTO result = paymentService.cancelPayment(paymentId);
+
+            // Then
+            assertNotNull(result);
+            assertNull(result.getPaymentDTO());
+            assertNull(result.getCancellationFee());
+            assertFalse(result.getValidationErrors().isEmpty());
+            assertTrue(result.getValidationErrors().contains(errorMessage));
+
+            // Verify interactions
+            verify(paymentRepository).findById(paymentId);
+            verify(paymentCancellationService).preparePaymentForCancellation(mockPayment, fixedDate, fixedDateTime);
+            verify(paymentRepository, never()).save(any());
+        }
+    }
+
+    @Test
+    @DisplayName("Should handle null cancellation fee gracefully")
+    void testCancelPayment_NullCancellationFee() throws RequestValidationException {
+        // Given
+        long paymentId = 123L;
+
+        when(paymentRepository.findById(paymentId)).thenReturn(Optional.of(mockPayment));
+        when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(mockPayment.getCancellationFee()).thenReturn(null);
+
+        try (MockedStatic<LocalDate> mockedLocalDate = mockStatic(LocalDate.class);
+             MockedStatic<LocalDateTime> mockedLocalDateTime = mockStatic(LocalDateTime.class)) {
+
+            mockedLocalDate.when(LocalDate::now).thenReturn(fixedDate);
+            mockedLocalDateTime.when(LocalDateTime::now).thenReturn(fixedDateTime);
+
+            // When & Then
+            assertThrows(NullPointerException.class, () -> {
+                paymentService.cancelPayment(paymentId);
+            });
+
+            // Verify interactions up to the point of failure
+            verify(paymentRepository).findById(paymentId);
+            verify(paymentCancellationService).preparePaymentForCancellation(mockPayment, fixedDate, fixedDateTime);
+            verify(paymentRepository).save(mockPayment);
+        }
+    }
+
+    @Test
+    @DisplayName("Should create new CancelPaymentResponseDTO with empty validation errors")
+    void testCancelPayment_ResponseDTOInitialization() {
+        // Given
+        long paymentId = 123L;
+
+        when(paymentRepository.findById(paymentId)).thenReturn(Optional.of(mockPayment));
+        when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(mockPayment.getCancellationFee()).thenReturn(mockCancellationFee);
+
+        try (MockedStatic<LocalDate> mockedLocalDate = mockStatic(LocalDate.class);
+             MockedStatic<LocalDateTime> mockedLocalDateTime = mockStatic(LocalDateTime.class)) {
+
+            mockedLocalDate.when(LocalDate::now).thenReturn(fixedDate);
+            mockedLocalDateTime.when(LocalDateTime::now).thenReturn(fixedDateTime);
+
+            // When
+            CancelPaymentResponseDTO result = paymentService.cancelPayment(paymentId);
+
+            // Then
+            assertNotNull(result);
+            assertNotNull(result.getValidationErrors());
+            assertTrue(result.getValidationErrors().isEmpty());
+        }
+    }
+
+    @Test
+    @DisplayName("Should use current date and time for cancellation")
+    void testCancelPayment_UsesCurrentDateTime() throws RequestValidationException {
+        // Given
+        long paymentId = 123L;
+
+        when(paymentRepository.findById(paymentId)).thenReturn(Optional.of(mockPayment));
+        when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(mockPayment.getCancellationFee()).thenReturn(mockCancellationFee);
+
+        try (MockedStatic<LocalDate> mockedLocalDate = mockStatic(LocalDate.class);
+             MockedStatic<LocalDateTime> mockedLocalDateTime = mockStatic(LocalDateTime.class)) {
+
+            mockedLocalDate.when(LocalDate::now).thenReturn(fixedDate);
+            mockedLocalDateTime.when(LocalDateTime::now).thenReturn(fixedDateTime);
+
+            // When
+            paymentService.cancelPayment(paymentId);
+
+            // Then
+            mockedLocalDate.verify(LocalDate::now);
+            mockedLocalDateTime.verify(LocalDateTime::now);
+            verify(paymentCancellationService).preparePaymentForCancellation(mockPayment, fixedDate, fixedDateTime);
+        }
+    }
+
+    @Test
+    @DisplayName("Should copy cancellation fee amount and currency correctly")
+    void testCancelPayment_CancellationFeeCopy() {
+        // Given
+        long paymentId = 123L;
+        Money originalFee = new Money();
+        originalFee.setAmount(BigDecimal.valueOf(15.75));
+        originalFee.setCurrency("EUR");
+
+        when(paymentRepository.findById(paymentId)).thenReturn(Optional.of(mockPayment));
+        when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(mockPayment.getCancellationFee()).thenReturn(originalFee);
+
+        try (MockedStatic<LocalDate> mockedLocalDate = mockStatic(LocalDate.class);
+             MockedStatic<LocalDateTime> mockedLocalDateTime = mockStatic(LocalDateTime.class)) {
+
+            mockedLocalDate.when(LocalDate::now).thenReturn(fixedDate);
+            mockedLocalDateTime.when(LocalDateTime::now).thenReturn(fixedDateTime);
+
+            // When
+            CancelPaymentResponseDTO result = paymentService.cancelPayment(paymentId);
+
+            // Then
+            assertNotNull(result.getCancellationFee());
+            assertEquals(BigDecimal.valueOf(15.75), result.getCancellationFee().getAmount());
+            assertEquals("EUR", result.getCancellationFee().getCurrency());
+
+            // Verify the original fee object is not the same as the response fee object
+            assertNotSame(originalFee, result.getCancellationFee());
+        }
+    }
+
 }

@@ -17,22 +17,13 @@ public enum PaymentType {
         this.code = code;
     }
 
-    public static boolean checkPaymentTypeValidity(String type) throws RequestValidationException {
-        for (PaymentType paymentType : values()) {
-            if (paymentType.code.equals(type)) {
-                return true;
-            }
-        }
-        throw new RequestValidationException(UNSUPPORTED_TYPE + type);
-    }
-
     public static PaymentType fromCode(String code) {
         if (code == null) {
             return null;
         }
 
         return Arrays.stream(values())
-                .filter(t -> t.code.equals(code.trim()))
+                .filter(t -> t.code.equals(code))
                 .findFirst()
                 .orElse(null);
     }

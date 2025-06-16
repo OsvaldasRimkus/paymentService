@@ -1,5 +1,7 @@
 package lt.rimkus.paymentService.models;
 
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -16,6 +18,8 @@ import lt.rimkus.paymentService.utilities.PaymentTypeValidationUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static lt.rimkus.paymentService.messages.OtherMessages.CREDITOR_IBAN_NOT_NULL;
 import static lt.rimkus.paymentService.messages.OtherMessages.DEBTOR_IBAN_NOT_NULL;
@@ -40,11 +44,27 @@ public abstract class Payment implements Transaction {
     @Column(nullable = false)
     private String type;
     @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "amount", column = @Column(name = "payment_amount")),
+            @AttributeOverride(name = "currency", column = @Column(name = "payment_currency"))
+    })
     private Money money;
     @Column(nullable = false)
     private String debtor_iban;
     @Column(nullable = false)
     private String creditor_iban;
+    @Column(nullable = false)
+    private LocalDate createdDate;
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+    private boolean cancelled;
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "amount", column = @Column(name = "cancellation_fee_amount")),
+            @AttributeOverride(name = "currency", column = @Column(name = "cancellation_fee_currency"))
+    })
+    private Money cancellationFee;
+    private LocalDateTime cancellationTime;
 
     public Payment() {
     }
@@ -114,6 +134,8 @@ public abstract class Payment implements Transaction {
         this.getMoney().setAmount(requestDTO.getMoney().getAmount());
         this.setDebtor_iban(requestDTO.getDebtor_iban());
         this.setCreditor_iban(requestDTO.getCreditor_iban());
+        this.setCreatedDate(LocalDate.now());
+        this.setCreatedAt(LocalDateTime.now());
     }
 
     /**
@@ -176,5 +198,45 @@ public abstract class Payment implements Transaction {
             throw new IllegalArgumentException(CREDITOR_IBAN_NOT_NULL);
         }
         this.creditor_iban = creditor_iban;
+    }
+
+    public LocalDate getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(LocalDate createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    public void setCancelled(boolean cancelled) {
+        this.cancelled = cancelled;
+    }
+
+    public Money getCancellationFee() {
+        return cancellationFee;
+    }
+
+    public void setCancellationFee(Money cancellationFee) {
+        this.cancellationFee = cancellationFee;
+    }
+
+    public LocalDateTime getCancellationTime() {
+        return cancellationTime;
+    }
+
+    public void setCancellationTime(LocalDateTime cancellationTime) {
+        this.cancellationTime = cancellationTime;
     }
 }
