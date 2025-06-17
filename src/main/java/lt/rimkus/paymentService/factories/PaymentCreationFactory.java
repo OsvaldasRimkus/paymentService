@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 public class PaymentCreationFactory {
 
     public Payment createNewPayment(CreatePaymentRequestDTO requestDTO) throws RequestValidationException {
-        // todo add logging
         Payment payment = createPayment(requestDTO);
         payment.validateEntityCreationRequest(requestDTO);
         payment.populateEntityData(requestDTO);

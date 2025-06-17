@@ -8,4 +8,7 @@ public class OtherMessages {
     public static final String AMOUNT_NOT_NULL = "Amount cannot be null";
     public static final String CURRENCY_NOT_NULL = "Currency cannot be null";
     public static final String HOURS_CANNOT_BE_NEGATIVE = "Hours cannot be negative";
+    public static final String SUCCESS = "Success";
+    public static final String FAILURE = "Failure";
+    public static final String FAILED_TO_SEND_OUT_NOTIFICATION = "Failed to send out notification for payment type: ";
 }

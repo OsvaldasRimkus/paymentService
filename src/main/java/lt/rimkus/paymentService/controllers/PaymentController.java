@@ -12,8 +12,6 @@ import lt.rimkus.paymentService.models.Payment;
 import lt.rimkus.paymentService.services.GeolocationService;
 import lt.rimkus.paymentService.services.PaymentService;
 import lt.rimkus.paymentService.utilities.IpAddressUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,8 +32,6 @@ import static lt.rimkus.paymentService.messages.ValidationErrorMessages.WAS_CANC
 @RestController
 @RequestMapping("api/payments")
 public class PaymentController {
-
-    private static final Logger logger = LoggerFactory.getLogger(PaymentController.class);
 
     @Autowired
     private PaymentService paymentService;

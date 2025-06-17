@@ -36,4 +36,19 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean("notificationExecutor")
+    public Executor notificationExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(5);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("Notification-");
+        executor.setRejectedExecutionHandler((r, executor1) -> {
+            // Log when queue is full - this helps with monitoring
+            System.err.println("Notification task rejected - queue is full");
+        });
+        executor.initialize();
+        return executor;
+    }
 }

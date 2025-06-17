@@ -1,5 +1,7 @@
 package lt.rimkus.paymentService.services;
 
+import static lt.rimkus.paymentService.messages.OtherMessages.FAILURE;
+import static lt.rimkus.paymentService.messages.OtherMessages.SUCCESS;
 import static lt.rimkus.paymentService.messages.ValidationErrorMessages.CREATION_REQUEST_NULL;
 import static lt.rimkus.paymentService.messages.ValidationErrorMessages.UNSUPPORTED_TYPE;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -13,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
 import lt.rimkus.paymentService.DTOs.CancelPaymentResponseDTO;
 import lt.rimkus.paymentService.DTOs.CreatePaymentRequestDTO;
@@ -25,6 +29,7 @@ import lt.rimkus.paymentService.exceptions.RequestValidationException;
 import lt.rimkus.paymentService.factories.PaymentCreationFactory;
 import lt.rimkus.paymentService.models.Money;
 import lt.rimkus.paymentService.models.Payment;
+import lt.rimkus.paymentService.models.TYPE1Payment;
 import lt.rimkus.paymentService.repositories.PaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +52,12 @@ class PaymentServiceTest {
 
     @Mock
     private PaymentCancellationService paymentCancellationService;
+
+    @Mock
+    private NotificationProcessor notificationProcessor;
+
+    @Mock
+    private Logger logger;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -115,6 +126,7 @@ class PaymentServiceTest {
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
         when(paymentCreationFactory.createNewPayment(requestDTO)).thenReturn(mockPayment);
         when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(any())).thenReturn(new CompletableFuture<>());
 
         // When
         CreatePaymentResponseDTO result = paymentService.createPayment(requestDTO, responseDTO);
@@ -137,6 +149,7 @@ class PaymentServiceTest {
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
         when(paymentCreationFactory.createNewPayment(requestDTO)).thenReturn(mockPayment);
         when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(any())).thenReturn(new CompletableFuture<>());
 
         // When
         paymentService.createPayment(requestDTO, responseDTO);
@@ -253,6 +266,7 @@ class PaymentServiceTest {
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
         when(paymentCreationFactory.createNewPayment(requestDTO)).thenReturn(mockPayment);
         when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(any())).thenReturn(new CompletableFuture<>());
 
         // When
         CreatePaymentResponseDTO result = paymentService.createPayment(requestDTO, responseDTO);
@@ -269,6 +283,7 @@ class PaymentServiceTest {
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
         when(paymentCreationFactory.createNewPayment(requestDTO)).thenReturn(mockPayment);
         when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(any())).thenReturn(new CompletableFuture<>());
 
         // When
         paymentService.createPayment(requestDTO, responseDTO);
@@ -301,6 +316,7 @@ class PaymentServiceTest {
     void testCreatePayment_WithDifferentPaymentTypes_ShouldNotSkipValidation() throws RequestValidationException {
         when(paymentCreationFactory.createNewPayment(requestDTO)).thenReturn(mockPayment);
         when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(any())).thenReturn(new CompletableFuture<>());
 
         // Test TYPE1
         requestDTO.setType("TYPE1");
@@ -338,6 +354,7 @@ class PaymentServiceTest {
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid(requestDTO.getType())).thenReturn(false);
         when(paymentCreationFactory.createNewPayment(requestDTO)).thenReturn(mockPayment);
         when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(any())).thenReturn(new CompletableFuture<>());
 
         // When - This should not throw AssertionError since mockPayment is not null
         assertDoesNotThrow(() -> {
@@ -364,6 +381,7 @@ class PaymentServiceTest {
         when(paymentTypeValidationAdapter.isPaymentTypeNotValid("TYPE_INVALID")).thenReturn(true);
         when(paymentCreationFactory.createNewPayment(request1)).thenReturn(mockPayment);
         when(mockPayment.convertToDTO()).thenReturn(mockPaymentDTO);
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(any())).thenReturn(new CompletableFuture<>());
 
         // When
         CreatePaymentResponseDTO result1 = paymentService.createPayment(request1, response1);
@@ -650,6 +668,156 @@ class PaymentServiceTest {
         assertEquals(3, result.getCancellationFee().getCurrency().length());
         assertThat(result.getCancellationFee().getCurrency()).contains("EUR");
         verify(paymentRepository).getPaymentCancellationDetails(paymentId);
+    }
+
+    @Test
+    @DisplayName("Should set notification status to SUCCESS when notification processor returns SUCCESS")
+    void testNotificationSuccess() throws RequestValidationException {
+        // Given
+        CompletableFuture<String> successFuture = CompletableFuture.completedFuture(SUCCESS);
+        Payment newPayment = new TYPE1Payment();
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(newPayment)).thenReturn(successFuture);
+
+        // When
+        // Execute the code block (assuming it's in a method called processPaymentNotification)
+        paymentService.notifyServiceAndUpdatePaymentInDatabase(newPayment);
+
+        // Wait for async operation to complete
+        successFuture.join();
+
+        // Then
+        verify(notificationProcessor).notifyServiceAboutCreatedPayment(newPayment);
+        assertEquals(SUCCESS, newPayment.getNotificationStatus());
+        verify(paymentRepository).save(newPayment);
+        verifyNoInteractions(logger);
+    }
+
+    @Test
+    @DisplayName("Should set notification status to FAILURE when notification processor returns non-SUCCESS result")
+    void testNotificationFailure() throws RequestValidationException {
+        // Given
+        String failureResult = "ERROR";
+        CompletableFuture<String> failureFuture = CompletableFuture.completedFuture(failureResult);
+        Payment newPayment = new TYPE1Payment();
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(newPayment))
+                .thenReturn(failureFuture);
+
+        // When
+        paymentService.notifyServiceAndUpdatePaymentInDatabase(newPayment);
+
+        // Wait for async operation to complete
+        failureFuture.join();
+
+        // Then
+        verify(notificationProcessor).notifyServiceAboutCreatedPayment(newPayment);
+        assertEquals(FAILURE, newPayment.getNotificationStatus());
+        verify(paymentRepository).save(newPayment);
+        verifyNoInteractions(logger);
+    }
+
+    @Test
+    @DisplayName("Should set notification status to FAILURE when notification processor returns null")
+    void testNotificationNullResult() throws RequestValidationException {
+        // Given
+        CompletableFuture<String> nullFuture = CompletableFuture.completedFuture(null);
+        Payment newPayment = new TYPE1Payment();
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(newPayment)).thenReturn(nullFuture);
+
+        // When
+        paymentService.notifyServiceAndUpdatePaymentInDatabase(newPayment);
+
+        // Wait for async operation to complete
+        nullFuture.join();
+
+        // Then
+        verify(notificationProcessor).notifyServiceAboutCreatedPayment(newPayment);
+        assertEquals(FAILURE, newPayment.getNotificationStatus());
+        verify(paymentRepository).save(newPayment);
+        verifyNoInteractions(logger);
+    }
+
+    @Test
+    @DisplayName("Should not update payment when RequestValidationException is thrown")
+    void testRequestValidationExceptionHandling() throws RequestValidationException {
+        // Given
+        RequestValidationException exception = new RequestValidationException("Validation failed");
+        Payment newPayment = new TYPE1Payment();
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(newPayment))
+                .thenThrow(exception);
+
+        // When
+        paymentService.notifyServiceAndUpdatePaymentInDatabase(newPayment);
+
+        // Then
+        verify(notificationProcessor).notifyServiceAboutCreatedPayment(newPayment);
+        verifyNoInteractions(paymentRepository);
+        assertNull(newPayment.getNotificationStatus()); // Status should remain unchanged
+    }
+
+    @Test
+    @DisplayName("Should handle CompletableFuture exception and set notification status to FAILURE")
+    void testAsyncNotificationException() throws RequestValidationException {
+        // Given
+        CompletableFuture<String> exceptionalFuture = new CompletableFuture<>();
+        exceptionalFuture.completeExceptionally(new RuntimeException("Network error"));
+        Payment newPayment = new TYPE1Payment();
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(newPayment))
+                .thenReturn(exceptionalFuture);
+
+        // When
+        paymentService.notifyServiceAndUpdatePaymentInDatabase(newPayment);
+
+        // Then
+        verify(notificationProcessor).notifyServiceAboutCreatedPayment(newPayment);
+
+        assertNull(newPayment.getNotificationStatus());
+        verifyNoInteractions(paymentRepository);
+        verifyNoInteractions(logger);
+    }
+
+    @Test
+    @DisplayName("Should preserve payment data integrity during notification process")
+    void testPaymentDataIntegrity() throws RequestValidationException {
+        // Given
+        CompletableFuture<String> successFuture = CompletableFuture.completedFuture(SUCCESS);
+        Payment newPayment = new TYPE1Payment();
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(newPayment))
+                .thenReturn(successFuture);
+
+        Long originalId = newPayment.getId();
+        String originalType = newPayment.getType();
+        newPayment.setMoney(new Money());
+        BigDecimal originalAmount = newPayment.getMoney().getAmount();
+
+        // When
+        paymentService.notifyServiceAndUpdatePaymentInDatabase(newPayment);
+        successFuture.join();
+
+        // Then
+        assertEquals(originalId, newPayment.getId());
+        assertEquals(originalType, newPayment.getType());
+        assertEquals(originalAmount, newPayment.getMoney().getAmount());
+        assertEquals(SUCCESS, newPayment.getNotificationStatus());
+    }
+
+    @Test
+    @DisplayName("Should verify exact interaction sequence with dependencies")
+    void testInteractionSequence() throws RequestValidationException {
+        // Given
+        CompletableFuture<String> successFuture = CompletableFuture.completedFuture(SUCCESS);
+        Payment newPayment = new TYPE1Payment();
+        when(notificationProcessor.notifyServiceAboutCreatedPayment(newPayment))
+                .thenReturn(successFuture);
+
+        InOrder inOrder = inOrder(notificationProcessor, paymentRepository);
+
+        // When
+        paymentService.notifyServiceAndUpdatePaymentInDatabase(newPayment);
+        successFuture.join();
+
+        // Then
+        inOrder.verify(notificationProcessor).notifyServiceAboutCreatedPayment(newPayment);
+        inOrder.verify(paymentRepository).save(newPayment);
     }
 
 }

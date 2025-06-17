@@ -65,6 +65,7 @@ public abstract class Payment implements Transaction {
     })
     private Money cancellationFee;
     private LocalDateTime cancellationTime;
+    private String notificationStatus;
 
     public Payment() {
     }
@@ -236,5 +237,13 @@ public abstract class Payment implements Transaction {
 
     public void setCancellationTime(LocalDateTime cancellationTime) {
         this.cancellationTime = cancellationTime;
+    }
+
+    public String getNotificationStatus() {
+        return notificationStatus;
+    }
+
+    public void setNotificationStatus(String notificationStatus) {
+        this.notificationStatus = notificationStatus;
     }
 }

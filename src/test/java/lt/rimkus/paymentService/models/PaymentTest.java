@@ -667,6 +667,32 @@ class PaymentTest {
             assertEquals(newCancellationFee, payment.getCancellationFee());
         }
 
+        @Test
+        @DisplayName("Should set and get notification status correctly")
+        void testSetNotificationStatus() {
+            // Given
+            String expectedStatus = "SUCCESS";
+
+            // When
+            payment.setNotificationStatus(expectedStatus);
+
+            // Then
+            assertEquals(expectedStatus, payment.getNotificationStatus());
+        }
+
+        @Test
+        @DisplayName("Should set and get notification status correctly when it is null")
+        void testSetNotificationStatusWhenNull() {
+            // Given
+            String expectedStatus = null;
+
+            // When
+            payment.setNotificationStatus(expectedStatus);
+
+            // Then
+            assertEquals(expectedStatus, payment.getNotificationStatus());
+        }
+
     }
 
     @Nested
