@@ -5,9 +5,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
+
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class GeolocationService {
@@ -17,9 +22,18 @@ public class GeolocationService {
     private final RestTemplate restTemplate;
     private final String geoServiceUrl;
 
-    public GeolocationService(RestTemplate restTemplate, @Value("${app.geo.service.url:https://get.geojs.io/v1/ip/geo/}") String geoServiceUrl) {
-        this.restTemplate = restTemplate;
+    public GeolocationService(RestTemplateBuilder restTemplateBuilder, @Value("${app.geo.service.url:https://get.geojs.io/v1/ip/geo/}") String geoServiceUrl) {
+        this.restTemplate = restTemplateBuilder
+                .connectTimeout(Duration.ofSeconds(3))
+                .readTimeout(Duration.ofSeconds(5))
+                .build();
         this.geoServiceUrl = geoServiceUrl;
+    }
+
+    @Async("geoLocationExecutor")
+    public CompletableFuture<String> resolveCountryByIpAsync(String ipAddress) {
+        String country = resolveCountryByIp(ipAddress);
+        return CompletableFuture.completedFuture(country);
     }
 
     public String resolveCountryByIp(String ipAddress) {
@@ -28,6 +42,7 @@ public class GeolocationService {
             return "Unknown";
         }
 
+        // Handle localhost and private IPs
         if (isLocalOrPrivateIp(ipAddress)) {
             logger.debug("Local or private IP detected: {}", ipAddress);
             return "Local";
@@ -41,7 +56,7 @@ public class GeolocationService {
 
             if (response != null && response.getCountry() != null) {
                 String country = response.getCountry();
-                logger.debug("Resolved country for IP {}: {}", ipAddress, country);
+                logger.info("Resolved country for IP {}: {}", ipAddress, country);
                 return country;
             } else {
                 logger.warn("No country data returned for IP: {}", ipAddress);
@@ -52,6 +67,13 @@ public class GeolocationService {
             logger.error("Error resolving country for IP {}: {}", ipAddress, e.getMessage());
             return "Unknown";
         }
+    }
+
+    @Async("geoLocationExecutor")
+    public void logCountryAsync(String ipAddress, String additionalContext) {
+        String country = resolveCountryByIp(ipAddress);
+        logger.info("[ASYNC] Country resolved for IP {}: {} | Context: client action {}",
+                ipAddress, country, additionalContext);
     }
 
     private boolean isLocalOrPrivateIp(String ip) {

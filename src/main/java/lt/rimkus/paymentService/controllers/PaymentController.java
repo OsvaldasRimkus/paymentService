@@ -53,8 +53,7 @@ public class PaymentController {
     public ResponseEntity<CreatePaymentResponseDTO> createPayment(@RequestBody CreatePaymentRequestDTO newPayment, HttpServletRequest httpRequest) {
 
         String clientIp = IpAddressUtil.getClientIpAddress(httpRequest);
-        String country = geolocationService.resolveCountryByIp(clientIp);
-        logger.info("Processing payment creation request from IP: {} | Country: {} ", clientIp, country );
+        geolocationService.logCountryAsync(clientIp, "<Payment creation>");
 
         CreatePaymentResponseDTO responseDTO = new CreatePaymentResponseDTO();
         responseDTO = paymentService.createPayment(newPayment, responseDTO);
@@ -70,11 +69,9 @@ public class PaymentController {
     public ResponseEntity<CancelPaymentResponseDTO> cancelPayment(@RequestBody Long paymentId, HttpServletRequest httpRequest) {
 
         String clientIp = IpAddressUtil.getClientIpAddress(httpRequest);
-        String country = geolocationService.resolveCountryByIp(clientIp);
-        logger.info("Processing payment cancellation request from IP: {} | Country: {} ", clientIp, country );
+        geolocationService.logCountryAsync(clientIp, "<Payment cancellation>");
 
         CancelPaymentResponseDTO responseDTO = paymentService.cancelPayment(paymentId);
-
         if (!responseDTO.getValidationErrors().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseDTO);
         } else if (responseDTO.getPaymentDTO() == null) {
